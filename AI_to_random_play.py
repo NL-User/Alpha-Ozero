@@ -4,7 +4,7 @@ from tensorflow.keras.models import load_model
 from game import *
 import random
 if __name__ == '__main__':
-    # ó‘Ô‚Ì¶¬
+    # çŠ¶æ…‹ã®ç”Ÿæˆ
     state = State()
     model = load_model('./model/best.h5')
     next_action = pv_mcts_action(model, 0.0)
@@ -18,14 +18,14 @@ if __name__ == '__main__':
 
     count = 0
         
-    # ƒQ[ƒ€I—¹‚Ü‚Å‚Ìƒ‹[ƒv
+    # ã‚²ãƒ¼ãƒ çµ‚äº†ã¾ã§ã®ãƒ«ãƒ¼ãƒ—
     while True:
-        # ƒQ[ƒ€I—¹
+        # ã‚²ãƒ¼ãƒ çµ‚äº†æ™‚
         if state.is_done():
             break
         if (count % 2) == random_color:
-            # Ÿ‚Ìó‘Ô‚Ìæ“¾
+            # æ¬¡ã®çŠ¶æ…‹ã®å–å¾—
             state = state.next(random_action(state))
         else:
             state = state.next(next_action(state))
-    print("•:{0} ”’:{1}".format(state.piece_count(state.pieces)..format(state.piece_count(state.enemy_pieces))
+    print("é»’:{0} ç™½:{1}".format(state.piece_count(state.pieces), state.piece_count(state.enemy_pieces)))
