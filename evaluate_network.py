@@ -17,10 +17,10 @@ EN_TEMPERATURE = 1.0 # ボルツマン分布の温度
 
 # 先手プレイヤーのポイント
 def first_player_point(ended_state):
-    # 1:先手勝利, -1:先手敗北, 0:引き分け
+    # 1:先手勝利, 0:先手敗北, 0.5:引き分け
     if ended_state.is_lose():
-        return -1 if ended_state.is_first_player() else 1
-    return 0
+        return 0 if ended_state.is_first_player() else 1
+    return 0.5
 
 # 1ゲームの実行
 def play(next_actions):
@@ -68,7 +68,7 @@ def evaluate_network():
         if i % 2 == 0:
             total_point += play(next_actions)
         else:
-            total_point += -1 * play(list(reversed(next_actions)))
+            total_point += 1 - play(list(reversed(next_actions)))
 
         # 出力
         print('\rEvaluate {}/{}'.format(i + 1, EN_GAME_COUNT), end='')
