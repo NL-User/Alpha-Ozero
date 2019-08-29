@@ -1,13 +1,14 @@
-﻿import random
+import random
 import math
-import gmpy2
 
 class State:
-    def __init__(self, black_board=None, white_board=None, depth=0):
+    def __init__(self, black_board=None, white_board=None, depth = 0, turn = False):
         # 連続パスによる終了
         self.pass_end = False
         # ターン数の保存
         self.depth = depth
+        # ターン（Falseが黒、Trueが白）の保存
+        self.turn = turn
         if black_board == None or white_board == None:
             # 石の初期配置
             self.black_board = 0x0000001008000000
@@ -19,7 +20,7 @@ class State:
             
     # 石の数の取得
     def piece_count(self, board):
-        return gmpy2.popcount(black_board)
+        return bin(board).count("1")
     # 負けかどうか
     def is_lose(self):
         return self.is_done() and self.piece_count(self.black_board) < self.piece_count(self.white_board)
@@ -33,12 +34,14 @@ class State:
         return self.piece_count(self.black_board) + self.piece_count(self.white_board) == 64 or self.pass_end
     # 次の状態の取得
     def next(self, action):
-        state = State(self.black_board.copy(), self.white_board.copy(), self.depth+1)
-        if action != 64:
+        state = State(self.black_board, self.white_board, self.depth + 1, not self.turn)
+        # print_board(state.legal_actions())
+        if action != 0x0000000000000000:
             state.is_legal_action_site(action, True)
-        w = state.black_board
-        state.black_board = state.white_board
-        state.white_board = w
+            if state.depth != 59 and state.turn:
+                state = State(state.white_board, state.black_board, state.depth, not self.turn)
+        else:
+            state = State(state.white_board, state.black_board, state.depth - 1)
 
         # 2回連続パス判定
         if action == 0x0000000000000000 and state.legal_actions() == 0x0000000000000000:
@@ -46,10 +49,10 @@ class State:
         return state
     # 合法手が立ったビットを取得
     def legal_actions(self):
-        blank = ~(self.black_board | self.white_board)
-        h = self.white_board & 0x7e7e7e7e7e7e7e7e
-        v = self.white_board & 0x00ffffffffffff00
-        a = self.white_board & 0x007e7e7e7e7e7e00
+        blank = ~(self.white_board | self.black_board)
+        h = self.black_board & 0x7e7e7e7e7e7e7e7e
+        v = self.black_board & 0x00ffffffffffff00
+        a = self.black_board & 0x007e7e7e7e7e7e00
 
         def legal_r(board, masked, blank, dir):
             """Direction >> dir exploring."""
@@ -72,14 +75,14 @@ class State:
             legal = blank & (tmp << dir)
             return legal
 
-        legal = legal_l(self.black_board, h, blank, 1)
-        legal |= legal_l(self.black_board, v, blank, 8)
-        legal |= legal_l(self.black_board, a, blank, 7)
-        legal |= legal_l(self.black_board, a, blank, 9)
-        legal |= legal_r(self.black_board, h, blank, 1)
-        legal |= legal_r(self.black_board, v, blank, 8)
-        legal |= legal_r(self.black_board, a, blank, 7)
-        legal |= legal_r(self.black_board, a, blank, 9)
+        legal = legal_l(self.white_board, h, blank, 1)
+        legal |= legal_l(self.white_board, v, blank, 8)
+        legal |= legal_l(self.white_board, a, blank, 7)
+        legal |= legal_l(self.white_board, a, blank, 9)
+        legal |= legal_r(self.white_board, h, blank, 1)
+        legal |= legal_r(self.white_board, v, blank, 8)
+        legal |= legal_r(self.white_board, a, blank, 7)
+        legal |= legal_r(self.white_board, a, blank, 9)
         return legal
     # 左シフト方向
     def reversed_l(self, player, blank_masked, site, dir):
@@ -115,62 +118,73 @@ class State:
         return rev
     def is_legal_action_site(self, site, flip=False):
             """Return reversed site board."""
-            blank_h = ~(self.black_board | self.white_board & 0x7e7e7e7e7e7e7e7e)
-            blank_v = ~(self.black_board | self.white_board & 0x00ffffffffffff00)
-            blank_a = ~(self.black_board | self.white_board & 0x007e7e7e7e7e7e00)
-            rev = self.reversed_l(self.black_board, blank_h, site, 1)
-            rev |= self.reversed_l(self.black_board, blank_v, site, 8)
-            rev |= self.reversed_l(self.black_board, blank_a, site, 7)
-            rev |= self.reversed_l(self.black_board, blank_a, site, 9)
-            rev |= self.reversed_r(self.black_board, blank_h, site, 1)
-            rev |= self.reversed_r(self.black_board, blank_v, site, 8)
-            rev |= self.reversed_r(self.black_board, blank_a, site, 7)
-            rev |= self.reversed_r(self.black_board, blank_a, site, 9)
+            blank_h = ~(self.white_board | self.black_board & 0x7e7e7e7e7e7e7e7e)
+            blank_v = ~(self.white_board | self.black_board & 0x00ffffffffffff00)
+            blank_a = ~(self.white_board | self.black_board & 0x007e7e7e7e7e7e00)
+            rev = self.reversed_l(self.white_board, blank_h, site, 1)
+            rev |= self.reversed_l(self.white_board, blank_v, site, 8)
+            rev |= self.reversed_l(self.white_board, blank_a, site, 7)
+            rev |= self.reversed_l(self.white_board, blank_a, site, 9)
+            rev |= self.reversed_r(self.white_board, blank_h, site, 1)
+            rev |= self.reversed_r(self.white_board, blank_v, site, 8)
+            rev |= self.reversed_r(self.white_board, blank_a, site, 7)
+            rev |= self.reversed_r(self.white_board, blank_a, site, 9)
             
             if flip:
-                # 黒と白のボード情報を返す
-                return black ^ (rev ^ site), white ^ rev
+                self.white_board ^= (rev ^ site)
+                self.black_board ^= rev
             else:
                 # 任意のマスに置くと裏返るマスのフラグが立ったビットを取得
                 return rev
     # 先手かどうか
     def is_first_player(self):
         return self.depth%2 == 0
-    # 文字列を8文字ずつに区切る
-    def split_board(self, text):
-        return [ text[i*8:i*8+8] for i in range(int(len(text)/8)) ]
-    def convert_to_binary(board):
-        if board < 0:
-            board = format(board & 0xffffffffffffffff, '#066b')[2:]
-        else:
-            board = format(board, '#066b')[2:]
-    return board
     # 文字列表示
     def __str__(self):
         ox = ('●', '○') if self.is_first_player() else ('○', '●')
+        black = 0;
+        white = 0;
         
-        blank = white_board | black_board
+        blank = self.white_board | self.black_board
         board = str(int(convert_to_binary(blank)) + int(convert_to_binary(self.white_board))).zfill(64)
         board = split_board(board)
-        for str in board:
-            result = ''
-            for s in str:
+        result = ''
+        for st in board:
+            for s in st:
                 if s == '1':
-                    result += ox[0] + '  '
+                    result += ox[1]
+                    if ox[1] == '●':
+                        black += 1
+                    else:
+                        white += 1
+                            
                 elif s == '2':
-                    result += ox[1] + '  '
+                    result += ox[0]
+                    if ox[0] == '●':
+                        black += 1
+                    else:
+                        white += 1
                 else:
                     result += 'ー'
+                result += '  '
             else:
                 result += '\n'
+        print("黒:{0} 白:{1}".format(black, white))
         return result
 
-# ランダムで行動選択
-def random_action(state):
-    legal_actions =state.legal_actions()
-    # action = '1'.ljust(random.randint(0,64), '0').zfill(64)
-    for i,str in enumerate(legal_actions):
-        
+# 文字列を8文字ずつに区切る
+def split_board(text):
+    return [ text[i*8:i*8+8] for i in range(int(len(text)/8)) ]
+def convert_to_binary(board):
+    if board < 0:
+        board = format(board & 0xffffffffffffffff, '#066b')
+    else:
+        board = format(board, '#066b')
+    return board[2:]   
+
+def split_board(text):
+    return [ text[i*8:i*8+8] for i in range(int(len(text)/8)) ]
+
 def print_board(board):
     if board < 0:
         board = format(board & 0xffffffffffffffff, '#066b')[2:]
@@ -183,7 +197,46 @@ def print_board(board):
             result += s + ' '
         print(result)
     print()
+    
+# ランダムで行動選択
+def random_action(state):
+    legal_actions = state.legal_actions()
+    # 合法手の数を取得
+    legal_action_num = bin(legal_actions).count("1")
+    # 合法手が一つ以上あったら
+    if legal_action_num != 0:
+        # 合法手の中からランダムで一つ選択
+        action = random.randint(1,legal_action_num)
+        # 何番目の合法手か数える
+        flag_count = 0
+        for i in range(1,65):
+            # ビットが立っていたら数える
+            if (legal_actions & (1 << i)):
+                flag_count += 1
+                # 選択したビット以外は
+                if flag_count != action:
+                    # ビットを降ろす
+                    legal_actions &= ~(1 << i)
+    return legal_actions
 
+   
+    
+# 動作確認
+if __name__ == '__main__':
+    # 状態の生成
+    state = State()
+    print(state)
+    # ゲーム終了までのループ
+    while True:
+        # ゲーム終了時
+        if state.is_done():
+            break
 
-state = State()
-print_board(state.legal_actions())
+        # 次の状態の取得
+        state = state.next(random_action(state))
+
+        # 文字列表示
+        print(state)
+        print()
+    print("黒:{0} 白:{1}".format(state.piece_count(state.black_board), state.piece_count(state.white_board)))
+    print(state.is_lose())
