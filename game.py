@@ -142,8 +142,6 @@ class State:
     # 文字列表示
     def __str__(self):
         ox = ('●', '○') if self.is_first_player() else ('○', '●')
-        black = 0;
-        white = 0;
         
         blank = self.white_board | self.black_board
         board = str(int(convert_to_binary(blank)) + int(convert_to_binary(self.white_board))).zfill(64)
@@ -153,23 +151,14 @@ class State:
             for s in st:
                 if s == '1':
                     result += ox[1]
-                    if ox[1] == '●':
-                        black += 1
-                    else:
-                        white += 1
                             
                 elif s == '2':
                     result += ox[0]
-                    if ox[0] == '●':
-                        black += 1
-                    else:
-                        white += 1
                 else:
                     result += 'ー'
                 result += '  '
             else:
                 result += '\n'
-        print("黒:{0} 白:{1}".format(black, white))
         return result
 
 # 文字列を8文字ずつに区切る
@@ -239,4 +228,12 @@ if __name__ == '__main__':
         print(state)
         print()
     print("黒:{0} 白:{1}".format(state.piece_count(state.black_board), state.piece_count(state.white_board)))
-    print(state.is_lose())
+    result = ''
+    if state.is_draw():
+        result = "引き分け"
+    elif state.is_lose():
+        result = "白の勝ち"
+    else:
+        result = "黒の勝ち"
+        
+    print(result)
