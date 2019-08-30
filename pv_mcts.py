@@ -3,7 +3,7 @@
 # ====================
 
 # パッケージのインポート
-from game import State
+from game import *
 from dual_network import DN_INPUT_SHAPE
 from math import sqrt
 from tensorflow.keras.models import load_model
@@ -15,16 +15,20 @@ PV_EVALUATE_COUNT = 50 # 1推論あたりのシミュレーション回数（本
 
 # 推論
 def predict(model, state):
+    # 16進数（int）から2進数の8×8の配列に変換（int）
+    black_board = convert_to_array(state.black_board)
+    white_board = convert_to_array(state.white_board)
+
     # 推論のための入力データのシェイプの変換
     a, b, c = DN_INPUT_SHAPE
-    x = np.array([state.pieces, state.enemy_pieces])
-    x = x.reshape(c, a, b).transpose(1, 2, 0).reshape(1, a, b, c)
+    x = np.array([black_board, white_board])
+    x = x.reshape(c, b, a).transpose(1, 2, 0).reshape(1, a, b, c)
 
     # 推論
     y = model.predict(x, batch_size=1)
 
     # 方策の取得
-    policies = y[0][0][list(state.legal_actions())] # 合法手のみ
+    policies = y[0][0][list(state.legal_actions_array())] # 合法手のみ
     policies /= sum(policies) if sum(policies) else 1 # 合計1の確率分布に変換
 
     # 価値の取得
@@ -73,7 +77,8 @@ def pv_mcts_scores(model, state, temperature):
 
                 # 子ノードの展開
                 self.child_nodes = []
-                for action, policy in zip(self.state.legal_actions(), policies):
+                for action, policy in zip(self.state.legal_actions_array(), policies):
+                    action = action_convert_to_hex(action)
                     self.child_nodes.append(Node(self.state.next(action), policy))
                 return value
 
@@ -121,7 +126,10 @@ def pv_mcts_scores(model, state, temperature):
 def pv_mcts_action(model, temperature=0):
     def pv_mcts_action(state):
         scores = pv_mcts_scores(model, state, temperature)
-        return np.random.choice(state.legal_actions(), p=scores)
+        action =  np.uint32(np.random.choice(state.legal_actions_array(), p=scores))
+        print(int(action/8),':',action%8)
+        action = action_convert_to_hex(action)
+        return action
     return pv_mcts_action
 
 # ボルツマン分布
@@ -137,6 +145,7 @@ if __name__ == '__main__':
 
     # 状態の生成
     state = State()
+    print(state)
 
     # モンテカルロ木探索で行動取得を行う関数の生成
     next_action = pv_mcts_action(model, 1.0)

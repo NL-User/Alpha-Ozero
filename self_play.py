@@ -3,7 +3,7 @@
 # ====================
 
 # パッケージのインポート
-from game import State
+from game import *
 from pv_mcts import pv_mcts_scores
 from dual_network import DN_OUTPUT_SIZE
 from datetime import datetime
@@ -52,12 +52,13 @@ def play(model):
 
         # 学習データに状態と方策を追加
         policies = [0] * DN_OUTPUT_SIZE
-        for action, policy in zip(state.legal_actions(), scores):
+        for action, policy in zip(state.legal_actions_array(), scores):
             policies[action] = policy
-        history.append([[state.pieces, state.enemy_pieces], policies, None])
+        history.append([[state.black_board, state.white_board], policies, None])
 
         # 行動の取得
-        action = np.random.choice(state.legal_actions(), p=scores)
+        action = np.random.choice(state.legal_actions_array(), p=scores)
+        action = action_convert_to_hex(action)
 
         # 次の状態の取得
         state = state.next(action)

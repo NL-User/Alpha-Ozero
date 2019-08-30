@@ -2,13 +2,11 @@ import random
 import math
 
 class State:
-    def __init__(self, black_board=None, white_board=None, depth = 0, turn = False):
+    def __init__(self, black_board=None, white_board=None, depth = 0):
         # 連続パスによる終了
         self.pass_end = False
         # ターン数の保存
         self.depth = depth
-        # ターン（Falseが黒、Trueが白）の保存
-        self.turn = turn
         if black_board == None or white_board == None:
             # 石の初期配置
             self.black_board = 0x0000001008000000
@@ -35,13 +33,10 @@ class State:
     # 次の状態の取得
     def next(self, action):
         # print_board(state.legal_actions())
-        state = State(self.black_board, self.white_board, self.depth, self.turn)
+        state = State(self.black_board, self.white_board, self.depth + 1)
         if action != 0x0000000000000000:
             state.is_legal_action_site(action, True)
-            if state.depth != 60:
-                state = State(state.white_board, state.black_board, state.depth + 1, not state.turn)
-        else:
-            state = State(state.white_board, state.black_board, state.depth, not state.turn)
+        state = State(state.white_board, state.black_board, state.depth)
 
         # 2回連続パス判定
         if action == 0x0000000000000000 and state.legal_actions() == 0x0000000000000000:
@@ -183,9 +178,14 @@ def convert_to_binary(board):
     return board[2:]
 def convert_to_array(board):
     board = convert_to_binary(board)
-    board = [int(i) for i in board]
+    board = [int(i) for i in reversed(board)]
     return board
-
+def action_convert_to_hex(action):
+    if action == 64:
+        action = 0x0000000000000000
+    else:
+        action = int(format((1 << action), '#016x'), 0)
+    return action
 def split_board(text):
     return [ text[i*8:i*8+8] for i in range(int(len(text)/8)) ]
 
