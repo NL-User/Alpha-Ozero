@@ -34,14 +34,14 @@ class State:
         return self.piece_count(self.black_board) + self.piece_count(self.white_board) == 64 or self.pass_end
     # 次の状態の取得
     def next(self, action):
-        state = State(self.black_board, self.white_board, self.depth + 1, not self.turn)
         # print_board(state.legal_actions())
+        state = State(self.black_board, self.white_board, self.depth, self.turn)
         if action != 0x0000000000000000:
             state.is_legal_action_site(action, True)
-            if state.depth != 59 and state.turn:
-                state = State(state.white_board, state.black_board, state.depth, not self.turn)
+            if state.depth != 60:
+                state = State(state.white_board, state.black_board, state.depth + 1, not state.turn)
         else:
-            state = State(state.white_board, state.black_board, state.depth - 1)
+            state = State(state.white_board, state.black_board, state.depth, not state.turn)
 
         # 2回連続パス判定
         if action == 0x0000000000000000 and state.legal_actions() == 0x0000000000000000:
@@ -116,6 +116,17 @@ class State:
                 else:
                     tmp |= tmp << dir
         return rev
+    # 従来通りの合法手の配列
+    def legal_actions_array(self):
+        array = convert_to_array(self.legal_actions())
+        for i in range(len(array)):
+            if array[i] == 1:
+                array[i] = i
+        array = [i for i in array if array[i] != 0]
+        if (len(array) == 0):
+            array = [64]
+        return array
+
     def is_legal_action_site(self, site, flip=False):
             """Return reversed site board."""
             blank_h = ~(self.white_board | self.black_board & 0x7e7e7e7e7e7e7e7e)
@@ -169,7 +180,11 @@ def convert_to_binary(board):
         board = format(board & 0xffffffffffffffff, '#066b')
     else:
         board = format(board, '#066b')
-    return board[2:]   
+    return board[2:]
+def convert_to_array(board):
+    board = convert_to_binary(board)
+    board = [int(i) for i in board]
+    return board
 
 def split_board(text):
     return [ text[i*8:i*8+8] for i in range(int(len(text)/8)) ]
