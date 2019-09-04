@@ -125,8 +125,7 @@ class State:
                 array[i] = 63 - i
             else:
                 array[i] = -1
-        array = [i for i in array if array[i] != -1]
-        # print(array)
+        array = [i for i in array if i != -1]
         if (len(array) == 0):
             array = [64]
         return array
@@ -189,7 +188,7 @@ def convert_to_binary(board):
     return board[2:]
 def convert_to_array(board):
     board = convert_to_binary(board)
-    board = [int(i) for i in reversed(board)]
+    board = [int(i) for i in board]
     return board
 def action_convert_to_hex(action):
     if action == 64:
