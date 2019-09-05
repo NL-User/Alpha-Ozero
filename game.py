@@ -33,14 +33,15 @@ class State:
     # 次の状態の取得
     def next(self, action):
         # print_board(state.legal_actions())
+        state = State(self.black_board, self.white_board, self.turn)
         if action != 0x0000000000000000:
-            self.is_legal_action_site(action, True)
-        self.turn = not self.turn
+            state.is_legal_action_site(action, True)
+        state.turn = not state.turn
 
         # 2回連続パス判定
-        if action == 0x0000000000000000 and self.legal_actions() == 0x0000000000000000:
-            self.pass_end = True
-        return self
+        if action == 0x0000000000000000 and state.legal_actions() == 0x0000000000000000:
+            state.pass_end = True
+        return state
     def swap(self):
         if not self.turn:
             return self.black_board, self.white_board

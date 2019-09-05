@@ -9,8 +9,6 @@ from math import sqrt
 from tensorflow.keras.models import load_model
 from pathlib import Path
 import numpy as np
-import copy
-
 # パラメータの準備
 PV_EVALUATE_COUNT = 50 # 1推論あたりのシミュレーション回数（本家は1600）
 
@@ -126,7 +124,7 @@ def pv_mcts_scores(model, state, temperature):
 # モンテカルロ木探索で行動選択
 def pv_mcts_action(model, temperature=0):
     def pv_mcts_action(state):
-        scores = pv_mcts_scores(model, copy.deepcopy(state), temperature)
+        scores = pv_mcts_scores(model, state, temperature)
         action =  np.uint32(np.random.choice(state.legal_actions_array(), p=scores))
         print(int(action/8),':',action%8)
         action = action_convert_to_hex(action)
