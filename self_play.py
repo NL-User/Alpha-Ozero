@@ -53,7 +53,6 @@ def play(model):
         # 学習データに状態と方策を追加
         policies = [0] * DN_OUTPUT_SIZE
         for action, policy in zip(state.legal_actions_array(), scores):
-            action = action_convert_to_hex(action)
             policies[action] = policy
         history.append([[state.black_board, state.white_board], policies, None])
 
