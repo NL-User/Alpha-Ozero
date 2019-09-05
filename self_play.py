@@ -21,9 +21,12 @@ SP_TEMPERATURE = 1.0 # ボルツマン分布の温度パラメータ
 # 先手プレイヤーの価値
 def first_player_value(ended_state):
     # 1:先手勝利, -1:先手敗北, 0:引き分け
-    if ended_state.is_lose():
-        return -1 if ended_state.is_first_player() else 1
-    return 0
+    if ended_state.is_draw():
+        return 0
+    elif ended_state.is_lose():
+        return -1
+    else:
+        return 1
 
 # 学習データの保存
 def write_data(history):
@@ -54,6 +57,7 @@ def play(model):
         policies = [0] * DN_OUTPUT_SIZE
         for action, policy in zip(state.legal_actions_array(), scores):
             policies[action] = policy
+        state.black_board, state.white_board = state.swap()
         history.append([[state.black_board, state.white_board], policies, None])
 
         # 行動の取得
