@@ -206,9 +206,9 @@ def print_board(board):
     else:
         board = format(board, '#066b')[2:]
     board = split_board(board)
-    for st in reversed(board):
+    for st in board:
         result = ""
-        for s in reversed(st.format('08')):
+        for s in st.format('08'):
             result += s + ' '
         print(result)
     print()
