@@ -1,4 +1,4 @@
-### This is AI othello AKA reversi(8×８） like Alpha Zero.
+### This is AI othello AKA reversi(8×8） like Alpha Zero.
 Langage is Python, and using keras of tensorflow.
 
 #### I made it using [this book](https://www.borndigital.co.jp/book/14383.html).
