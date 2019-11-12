@@ -11,3 +11,14 @@ But, it branch isn't faster than master branch, I can't merge bitboard branch.
 The **game.py** file in bitboard-develop branch is **twice as fast** as it in master branch.  
 But, **the pv_mcts.py** file in bitboard-develop branch is about the **same or as slower** as it in master branch.  
 So, the execution speed of the **self_play.py** file in the bitboard-develop branch is **also slow**.  
+
+
+### Explain major files.
+- **game.py** file includes a class to simply play reversi.
+- **dual_network.py** file is includes a function to create dual network and save best model.
+- **pv_mcts.py file** includes functions for exploring Monte Carlo trees.
+- **self_play.py file** includes functions to play self-play and save lerning data.
+- **train_network.py** file includes a function to learning from self-play's data.
+- **evaluate_network.py** file includes  functions conparing latest and past model and evaluating.
+- **train_cycle.py** file run when we want to repeat a series of learning.
+
