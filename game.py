@@ -1,6 +1,7 @@
 import numpy as np
-from config import *
-from bit_function import *
+import copy
+from config import BOARD_X_SIZE, BOARD_Y_SIZE, CELLS_COUNT
+from bit_function import all_standing_bit, count_bit, convert_to_array, convert_to_np_array
 
 is_background_black = True
 black_piece = '○' if is_background_black else '●'
@@ -8,35 +9,35 @@ white_piece = '●' if is_background_black else '○'
 
 
 # black_defalt_board = 0x0000000810000000
-black_defalt_board = (1 << board_y_size // 2 * board_x_size + (board_x_size // 2 - 1)) | (1 << (board_y_size // 2 - 1) * board_x_size + board_x_size // 2)
+black_defalt_board = (1 << BOARD_Y_SIZE // 2 * BOARD_X_SIZE + (BOARD_X_SIZE // 2 - 1)) | (1 << (BOARD_Y_SIZE // 2 - 1) * BOARD_X_SIZE + BOARD_X_SIZE // 2)
 # white_board_defalt_value = 0x0000001008000000
-white_defalt_board = (1 << board_y_size // 2 * board_x_size + board_x_size // 2) | (1 << (board_y_size // 2 - 1) * board_x_size + board_x_size // 2 - 1)
+white_defalt_board = (1 << BOARD_Y_SIZE // 2 * BOARD_X_SIZE + BOARD_X_SIZE // 2) | (1 << (BOARD_Y_SIZE // 2 - 1) * BOARD_X_SIZE + BOARD_X_SIZE // 2 - 1)
 
-board_min_size = min(board_x_size,board_y_size)
+board_min_size = min(BOARD_X_SIZE,BOARD_Y_SIZE)
 horizontal_mask_bit = all_standing_bit
-for i in range(0,cells_count,board_x_size):
+for i in range(0,CELLS_COUNT,BOARD_X_SIZE):
     horizontal_mask_bit ^= 1 << i
-    horizontal_mask_bit ^= 1 << i + board_x_size - 1
-vertical_mask_bit = (1 << (cells_count - board_x_size)) - 1 ^ ((1 << board_x_size) - 1)
+    horizontal_mask_bit ^= 1 << i + BOARD_X_SIZE - 1
+vertical_mask_bit = (1 << (CELLS_COUNT - BOARD_X_SIZE)) - 1 ^ ((1 << BOARD_X_SIZE) - 1)
 diagonal_mask_bit = (horizontal_mask_bit & vertical_mask_bit)
 
-# 1ビット（左右）
-legal_horizontal = [1, board_y_size]
-# 8ビット（上下）
-legal_vertical = [board_x_size, board_x_size]
-# 7ビット（左右）
-legal_diagonal_minus = [board_x_size - 1, board_min_size]
-# 9ビット（左右）
-legal_diagonal_plus = [board_x_size + 1, board_min_size]
+# 1ビットシフト（左右）
+legal_horizontal = (1, BOARD_Y_SIZE)
+# 8ビットシフト（上下）
+legal_vertical = (BOARD_X_SIZE, BOARD_X_SIZE)
+# 7ビットシフト（左右）
+legal_diagonal_minus = (BOARD_X_SIZE - 1, board_min_size)
+# 9ビットシフト（左右）
+legal_diagonal_plus = (BOARD_X_SIZE + 1, board_min_size)
 
 
 
 class State:
-    def __init__(self, black_board = None, white_board = None, turn = False):
+    def __init__(self, black_board = None, white_board = None, is_black_turn = False):
         # 連続パスによる終了
         self.pass_end = False
         # ターンの保存(Falseが黒)
-        self.turn = turn
+        self.is_black_turn = is_black_turn
         if black_board == None or white_board == None:
             # 石の初期配置
             self.black_board = black_defalt_board
@@ -49,30 +50,46 @@ class State:
     # 盤面のコマの数
     def piece_count(self):
         return count_bit(self.black_board) + count_bit(self.white_board)
+    # 黒ならTrueを入力すると報酬を得られる
+    def get_reward(self, is_black_flag):
+        # 引き分けは0、勝てば1、負ければ-1
+        if self.is_draw():
+            return 0
+        elif (not is_black_flag and self.is_lose()) or (is_black_flag and not self.is_lose()):
+            return 1
+        else:
+            return -1
+
     # 負けかどうか
     def is_lose(self):
-        return self.is_done() and count_bit(self.black_board) < count_bit(self.white_board)
+        return count_bit(self.black_board) < count_bit(self.white_board)
 
     # 引き分けかどうか
     def is_draw(self):
-        return self.is_done() and count_bit(self.black_board) == count_bit(self.white_board)
+        return count_bit(self.black_board) == count_bit(self.white_board)
 
     # ゲーム終了かどうか
     def is_done(self):
-        return self.piece_count() == cells_count or self.pass_end
+        return self.pass_end or self.piece_count() == CELLS_COUNT
     # 次の状態の取得
     def next(self, action):
         # print_board(state.legal_actions())
         # state = State(self.black_board, self.white_board, self.turn)
         if action != 0:
             self.is_legal_action_site(action, True)
-        self.turn = not self.turn
+        self.is_black_turn = not self.is_black_turn
 
         # 2回連続パス判定
         if action == 0 and self.legal_actions() == 0:
             self.pass_end = True
+    def get_next(self,action):
+        state = copy.deepcopy(self)
+        # state = State(self.black_board, self.white_board, self.is_black_turn)
+        state.next(action)
+        return state
+    # ターンによる並び替え
     def swap(self):
-        if not self.turn:
+        if not self.is_black_turn:
             return self.black_board, self.white_board
         else:
             return self.white_board, self.black_board
@@ -111,6 +128,17 @@ class State:
         legal |= self.legal_r(player, blank, diagonal, *legal_diagonal_minus)
         legal |= self.legal_r(player, blank, diagonal, *legal_diagonal_plus)
         return legal
+
+    # 従来通りの合法手の配列
+    def legal_actions_array(self):
+        return convert_to_array(self.legal_actions())
+
+    def legal_actions_index(self):
+        index = [i for i, v in zip(range(CELLS_COUNT - 1, -1, -1), self.legal_actions_array()) if v == 1]
+        if not index:
+            index = [-1]
+        return index
+
     # 左シフト方向
     def reversed_l(self, player, blank_masked, site, direction, count):
         """Direction << for self.reversed()."""
@@ -143,9 +171,6 @@ class State:
                 else:
                     tmp |= tmp << direction
         return reverse
-    # 従来通りの合法手の配列
-    def legal_actions_array(self):
-        return convert_to_array(self.legal_actions())
 
     def is_legal_action_site(self, site, flip=False):
         """Return reversed site board."""
@@ -163,7 +188,7 @@ class State:
         rev |= self.reversed_r(player, blank_diagonal, site, *legal_diagonal_plus)
         
         if flip:
-            if not self.turn:
+            if not self.is_black_turn:
                 self.black_board ^= (rev ^ site)
                 self.white_board ^= rev
             else:
@@ -193,22 +218,29 @@ class State:
         return result + '\n'
 
     
+def action_convert_to_bitboard(action):
+        if action == -1:
+            return 0
+        else:
+            return 1 << action
+
 # ランダムで行動選択
 def random_action(legal_actions):
-    legal_actions = np.array(legal_actions, dtype=float)
-    action = 0
     # 合法手の数を取得
-    legal_action_num = np.sum(legal_actions)
+    legal_action_num = int(np.sum(legal_actions))
     # 合法手が一つ以上あったら
     if legal_action_num != 0:
+        legal_actions = np.array(legal_actions,dtype=float)
+        # legal_actions /= legal_action_num
         legal_actions[legal_actions == 1] = 1 / legal_action_num
         # print(len(legal_actions))
         # 合法手の中からランダムで一つ選択
         # bit→文字列→listでindexが逆順なので逆順のrangeを取得
-        action = int(np.random.choice(range(cells_count - 1,-1,-1),1,p=legal_actions)[0])
-        # 何番目の合法手か数える
-        action = 1 << action
-    return action
+        action = int(np.random.choice(range(CELLS_COUNT - 1,-1,-1),1,p=legal_actions)[0])
+        # ビットに変換
+        return 1 << action
+    else:
+        return 0
 
    
     
@@ -225,7 +257,7 @@ if __name__ == '__main__':
             break
         # 文字列表示
         print("{0}ターン目".format(state.piece_count() - 3))
-        print(('白' if state.turn else '黒') + 'のターン')
+        print(('白' if state.is_black_turn else '黒') + 'のターン')
         print(state)
         # 次の状態の取得
         state.next(random_action(state.legal_actions_array()))

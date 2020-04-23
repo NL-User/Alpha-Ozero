@@ -3,6 +3,7 @@
 # ====================
 
 # パッケージのインポート
+from config import *
 from game import *
 from dual_network import DN_INPUT_SHAPE
 from math import sqrt
@@ -11,24 +12,28 @@ from pathlib import Path
 import numpy as np
 # パラメータの準備
 PV_EVALUATE_COUNT = 50 # 1推論あたりのシミュレーション回数（本家は1600）
+# 勝率と手の予測確率のバランスを調整する定数
+C_PUCT = 1.0
 
 # 推論
 def predict(model, state):
     # 16進数（int）から2進数の8×8の配列に変換（int）
-    black_board = convert_to_array(state.black_board)
-    white_board = convert_to_array(state.white_board)
+    black_board = convert_to_np_array(state.black_board)
+    white_board = convert_to_np_array(state.white_board)
 
     # 推論のための入力データのシェイプの変換
-    a, b, c = DN_INPUT_SHAPE
-    x = np.array([black_board, white_board])
-    x = x.reshape(c, b, a).transpose(1, 2, 0).reshape(1, a, b, c)
-
+    board = np.array([black_board, white_board]).transpose(1, 2, 0).reshape(1,*DN_INPUT_SHAPE)
+    turn = np.array([1 if state.is_black_turn else -1])
     # 推論
-    y = model.predict(x, batch_size=1)
+    y = model.predict([board, turn], batch_size=1)
 
     # 方策の取得
-    policies = y[0][0][list(state.legal_actions_array())] # 合法手のみ
-    policies /= sum(policies) if sum(policies) else 1 # 合計1の確率分布に変換
+    policies = np.array(y[0][0][np.array(state.legal_actions_index()) + 1]) # 合法手のみ
+    # 合計1の確率分布に変換
+    if np.sum(policies) == 0.0:
+        policies.fill(1 / len(policies))
+    else:
+        policies /= np.sum(policies)
 
     # 価値の取得
     value = y[1][0][0]
@@ -48,17 +53,18 @@ def pv_mcts_scores(model, state, temperature):
         # ノードの初期化
         def __init__(self, state, p):
             self.state = state # 状態
-            self.p = p # 方策
+            self.p = p # 方策の確率分布
             self.w = 0 # 累計価値
             self.n = 0 # 試行回数
             self.child_nodes = None  # 子ノード群
+            self.is_black_flag = state.is_black_turn # 自分が白なのか黒なのかを保存
 
         # 局面の価値の計算
         def evaluate(self):
             # ゲーム終了時
             if self.state.is_done():
                 # 勝敗結果で価値を取得
-                value = -1 if self.state.is_lose() else 0
+                value = self.state.get_reward(self.is_black_flag)
 
                 # 累計価値と試行回数の更新
                 self.w += value
@@ -76,14 +82,18 @@ def pv_mcts_scores(model, state, temperature):
 
                 # 子ノードの展開
                 self.child_nodes = []
-                for action, policy in zip(self.state.legal_actions_array(), policies):
-                    self.child_nodes.append(Node(self.state.next(action), policy))
+                # legal_array = state.legal_actions_array() + ([0] if 0 < count_bit(state.legal_actions()) else [1])
+                
+                for i, policie in zip(state.legal_actions_index(), policies):
+                # for i,policie in zip([i for i, v in zip(range(CELLS_COUNT - 1,-2,-1), self.state.legal_actions_array()) if v == 1], policies):
+                    # 
+                    self.child_nodes.append(Node(self.state.get_next(action_convert_to_bitboard(i)),policie))
                 return value
 
             # 子ノードが存在する時
             else:
                 # アーク評価値が最大の子ノードの評価で価値を取得
-                value = -self.next_child_node().evaluate()
+                value = self.next_child_node().evaluate()
 
                 # 累計価値と試行回数の更新
                 self.w += value
@@ -93,18 +103,17 @@ def pv_mcts_scores(model, state, temperature):
         # アーク評価値が最大の子ノードを取得
         def next_child_node(self):
             # アーク評価値の計算
-            C_PUCT = 1.0
             t = sum(nodes_to_scores(self.child_nodes))
             pucb_values = []
             for child_node in self.child_nodes:
-                pucb_values.append((-child_node.w / child_node.n if child_node.n else 0.0) +
+                pucb_values.append((child_node.w / child_node.n if child_node.n else 0.0) +
                     C_PUCT * child_node.p * sqrt(t) / (1 + child_node.n))
 
             # アーク評価値が最大の子ノードを返す
             return self.child_nodes[np.argmax(pucb_values)]
 
     # 現在の局面のノードの作成
-    root_node = Node(state, 0)
+    root_node = Node(state,0)
 
     # 複数回の評価の実行
     for _ in range(PV_EVALUATE_COUNT):
@@ -124,10 +133,10 @@ def pv_mcts_scores(model, state, temperature):
 def pv_mcts_action(model, temperature=0):
     def pv_mcts_action(state):
         scores = pv_mcts_scores(model, state, temperature)
-        action =  np.uint32(np.random.choice(state.legal_actions_array(), p=scores))
-        print(int(action/8),':',action%8)
-        action = action_convert_to_hex(action)
-        return action
+        action =  int(np.random.choice(state.legal_actions_index(), p=scores))
+        # print(action)
+        # print(int(action/8),':',action%8)
+        return action_convert_to_bitboard(action)
     return pv_mcts_action
 
 # ボルツマン分布
@@ -143,7 +152,7 @@ if __name__ == '__main__':
 
     # 状態の生成
     state = State()
-    print(state)
+    print()
 
     # モンテカルロ木探索で行動取得を行う関数の生成
     next_action = pv_mcts_action(model, 1.0)
@@ -154,11 +163,22 @@ if __name__ == '__main__':
         if state.is_done():
             break
 
-        # 行動の取得
-        action = next_action(state)
+        print("{0}ターン目".format(state.piece_count() - 3))
+        print(('白' if state.is_black_turn else '黒') + 'のターン')
+        print(state)
 
         # 次の状態の取得
-        state = state.next(action)
-
-        # 文字列表示
-        print(state)
+        state.next(next_action(state))
+    
+    print('終了\n')
+    print(state)
+    print("黒:{0} 白:{1}".format(count_bit(state.black_board), count_bit(state.white_board)))
+    result = ''
+    if state.is_draw():
+        result = "引き分け"
+    elif state.is_lose():
+        result = "白の勝ち"
+    else:
+        result = "黒の勝ち"
+        
+    print(result)

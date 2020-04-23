@@ -3,17 +3,17 @@
 # ====================
 
 # パッケージのインポート
-from tensorflow.keras.layers import Activation, Add, BatchNormalization, Conv2D, Dense, GlobalAveragePooling2D, Input
+from config import *
+from tensorflow.keras.layers import Activation, Add, BatchNormalization, Conv2D, Dense, GlobalAveragePooling2D, Input, Reshape
 from tensorflow.keras.models import Model
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras import backend as K
 import os
 
 # パラメータの準備
+DN_INPUT_SHAPE = (BOARD_Y_SIZE, BOARD_X_SIZE, 2)
 DN_FILTERS  = 128 # 畳み込み層のカーネル数（本家は256）
-DN_RESIDUAL_NUM =  19 # 残差ブロックの数（本家は19）
-DN_INPUT_SHAPE = (8, 8, 2) # 入力シェイプ
-DN_OUTPUT_SIZE = 65 # 行動数(配置先(6*6)+パス(1))
+DN_RESIDUAL_NUM =  16 # 残差ブロックの数（本家は19）
 
 # 畳み込み層の作成
 def conv(filters):
@@ -41,10 +41,14 @@ def dual_network():
         return
 
     # 入力層
-    input = Input(shape=DN_INPUT_SHAPE)
-
+    board = Input(shape=DN_INPUT_SHAPE)
+    # convが3次元じゃないといけないので変換
+    # board = Reshape((BOARD_Y_SIZE, BOARD_X_SIZE, 1, 1), input_shape = (BOARD_Y_SIZE, BOARD_X_SIZE))(board)
+    turn = Input(shape=(1))
+    inputs = [board,turn]
     # 畳み込み層
-    x = conv(DN_FILTERS)(input)
+    x = conv(DN_FILTERS)(board)
+    # x = conv(DN_FILTERS)(inputs)
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
 
@@ -55,8 +59,11 @@ def dual_network():
     # プーリング層
     x = GlobalAveragePooling2D()(x)
 
+    # 追加
+    x = Add()([x, turn])
+
     # ポリシー出力
-    p = Dense(DN_OUTPUT_SIZE, kernel_regularizer=l2(0.0005),
+    p = Dense(CELLS_COUNT + 1, kernel_regularizer=l2(0.0005),
                 activation='softmax', name='pi')(x)
 
     # バリュー出力
@@ -64,7 +71,7 @@ def dual_network():
     v = Activation('tanh', name='v')(v)
 
     # モデルの作成
-    model = Model(inputs=input, outputs=[p,v])
+    model = Model(inputs=inputs, outputs=[p,v])
 
     # モデルの保存
     os.makedirs('./model/', exist_ok=True) # フォルダがない時は生成

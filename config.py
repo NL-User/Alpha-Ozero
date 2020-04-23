@@ -1,4 +1,3 @@
-board_x_size = 8
-board_y_size = 8
-cells_count = board_x_size * board_y_size
-all_standing_bit = (1 << cells_count) - 1
+BOARD_X_SIZE = 8
+BOARD_Y_SIZE = 8
+CELLS_COUNT = BOARD_X_SIZE * BOARD_Y_SIZE
