@@ -18,9 +18,12 @@ EN_TEMPERATURE = 1.0 # ボルツマン分布の温度
 # 先手プレイヤーのポイント
 def first_player_point(ended_state):
     # 1:先手勝利, 0:先手敗北, 0.5:引き分け
-    if ended_state.is_lose():
-        return 0 if ended_state.is_first_player() else 1
-    return 0.5
+    if ended_state.is_draw():
+        return 0.5
+    elif ended_state.is_lose():
+        return 0
+    else:
+        return 1
 
 # 1ゲームの実行
 def play(next_actions):
@@ -34,11 +37,11 @@ def play(next_actions):
             break;
 
         # 行動の取得
-        next_action = next_actions[0] if state.is_first_player() else next_actions[1]
+        next_action = next_actions[0] if state.is_black_turn else next_actions[1]
         action = next_action(state)
 
         # 次の状態の取得
-        state = state.next(action)
+        state.next(action)
 
     # 先手プレイヤーのポイントを返す
     return first_player_point(state)

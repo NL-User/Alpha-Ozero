@@ -60,6 +60,9 @@ class State:
         else:
             return -1
 
+    def get_turn_num(self):
+        return 1 if self.is_black_turn else -1
+
     # 負けかどうか
     def is_lose(self):
         return count_bit(self.black_board) < count_bit(self.white_board)
@@ -218,7 +221,7 @@ class State:
         return result + '\n'
 
     
-def action_convert_to_bitboard(action):
+def action_convert_to_bit(action):
         if action == -1:
             return 0
         else:

@@ -3,12 +3,12 @@
 # ====================
 
 # パッケージのインポート
-from config import *
-from game import *
+from config import CELLS_COUNT
+from game import State, action_convert_to_bit, convert_to_np_array, count_bit
 from dual_network import DN_INPUT_SHAPE
 from math import sqrt
 from tensorflow.keras.models import load_model
-from pathlib import Path
+from glob import glob
 import numpy as np
 # パラメータの準備
 PV_EVALUATE_COUNT = 50 # 1推論あたりのシミュレーション回数（本家は1600）
@@ -23,7 +23,7 @@ def predict(model, state):
 
     # 推論のための入力データのシェイプの変換
     board = np.array([black_board, white_board]).transpose(1, 2, 0).reshape(1,*DN_INPUT_SHAPE)
-    turn = np.array([1 if state.is_black_turn else -1])
+    turn = np.array([state.get_turn_num()])
     # 推論
     y = model.predict([board, turn], batch_size=1)
 
@@ -87,7 +87,7 @@ def pv_mcts_scores(model, state, temperature):
                 for i, policie in zip(state.legal_actions_index(), policies):
                 # for i,policie in zip([i for i, v in zip(range(CELLS_COUNT - 1,-2,-1), self.state.legal_actions_array()) if v == 1], policies):
                     # 
-                    self.child_nodes.append(Node(self.state.get_next(action_convert_to_bitboard(i)),policie))
+                    self.child_nodes.append(Node(self.state.get_next(action_convert_to_bit(i)),policie))
                 return value
 
             # 子ノードが存在する時
@@ -133,10 +133,10 @@ def pv_mcts_scores(model, state, temperature):
 def pv_mcts_action(model, temperature=0):
     def pv_mcts_action(state):
         scores = pv_mcts_scores(model, state, temperature)
-        action =  int(np.random.choice(state.legal_actions_index(), p=scores))
+        action = int(np.random.choice(state.legal_actions_index(), p=scores))
         # print(action)
         # print(int(action/8),':',action%8)
-        return action_convert_to_bitboard(action)
+        return action_convert_to_bit(action)
     return pv_mcts_action
 
 # ボルツマン分布
@@ -147,7 +147,7 @@ def boltzman(xs, temperature):
 # 動作確認
 if __name__ == '__main__':
     # モデルの読み込み
-    path = sorted(Path('./model').glob('*.h5'))[-1]
+    path = sorted(glob('./model/*.h5'))[-1]
     model = load_model(str(path))
 
     # 状態の生成

@@ -2,31 +2,22 @@
 # セルフプレイ部
 # ====================
 
-# パッケージのインポート
-from game import *
+from config import CELLS_COUNT
+from game import State, action_convert_to_bit
+from bit_function import convert_to_array
 from pv_mcts import pv_mcts_scores
-from dual_network import DN_OUTPUT_SIZE
 from datetime import datetime
+import numpy as np
 from tensorflow.keras.models import load_model
 from tensorflow.keras import backend as K
-from pathlib import Path
-import numpy as np
+from glob import glob
 import pickle
 import os
 
 # パラメータの準備
-SP_GAME_COUNT = 500 # セルフプレイを行うゲーム数（本家は25000）
+SP_GAME_COUNT = 50 # セルフプレイを行うゲーム数（本家は25000）
+# SP_GAME_COUNT = 500 # セルフプレイを行うゲーム数（本家は25000）
 SP_TEMPERATURE = 1.0 # ボルツマン分布の温度パラメータ
-
-# 先手プレイヤーの価値
-def first_player_value(ended_state):
-    # 1:先手勝利, -1:先手敗北, 0:引き分け
-    if ended_state.is_draw():
-        return 0
-    elif ended_state.is_lose():
-        return -1
-    else:
-        return 1
 
 # 学習データの保存
 def write_data(history):
@@ -54,24 +45,22 @@ def play(model):
         scores = pv_mcts_scores(model, state, SP_TEMPERATURE)
 
         # 学習データに状態と方策を追加
-        policies = [0] * DN_OUTPUT_SIZE
-        for action, policy in zip(state.legal_actions_array(), scores):
-            policies[action] = policy
-        state.black_board, state.white_board = state.swap()
-        history.append([[state.black_board, state.white_board], policies, None])
+        policies = [0] * (CELLS_COUNT + 1)
+        for i, policy in zip(state.legal_actions_index(), scores):
+            policies[i + 1] = policy
+        history.append([[convert_to_array(state.black_board), convert_to_array(state.white_board)], state.get_turn_num(), policies, None])
 
         # 行動の取得
-        action = np.random.choice(state.legal_actions_array(), p=scores)
-        action = action_convert_to_hex(action)
+        action = int(np.random.choice(state.legal_actions_index(), p=scores))
+        action = action_convert_to_bit(action)
 
         # 次の状態の取得
-        state = state.next(action)
+        state = state.get_next(action)
 
     # 学習データに価値を追加
-    value = first_player_value(state)
+    value = state.get_reward(True)
     for i in range(len(history)):
-        history[i][2] = value
-        value = -value
+        history[i][3] = value if i % 2 == 0 else -value
     return history
 
 # セルフプレイ
@@ -79,8 +68,8 @@ def self_play():
     # 学習データ
     history = []
 
-    # ベストプレイヤーのモデルの読み込み
-    model = load_model('./model/best.h5')
+    # 最新？のモデルの読み込み
+    model = load_model(sorted(glob('./model/*.h5'))[-1])
 
     # 複数回のゲームの実行
     for i in range(SP_GAME_COUNT):

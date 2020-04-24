@@ -1,5 +1,5 @@
 import numpy as np
-from config import *
+from config import BOARD_X_SIZE, BOARD_Y_SIZE, CELLS_COUNT
 
 all_standing_bit = (1 << CELLS_COUNT) - 1
 
