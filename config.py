@@ -1,3 +1,5 @@
+# coding: utf-8
+
 BOARD_X_SIZE = 8
 BOARD_Y_SIZE = 8
 CELLS_COUNT = BOARD_X_SIZE * BOARD_Y_SIZE

@@ -1,3 +1,5 @@
+# coding: utf-8
+
 import numpy as np
 from config import BOARD_X_SIZE, BOARD_Y_SIZE, CELLS_COUNT
 
