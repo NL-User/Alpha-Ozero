@@ -10,7 +10,7 @@ from tensorflow.keras import backend as K
 import numpy as np
 import pickle
 from glob import glob
-
+import platform
 
 # パラメータの準備
 RN_EPOCHS = 100 # 学習回数
@@ -18,7 +18,7 @@ RN_EPOCHS = 100 # 学習回数
 # 学習データの読み込み
 def load_data():
     history_path = sorted(glob('./data/*.history'))[-1]
-    with history_path.open(mode='rb') as f:
+    with open(history_path, mode='rb') as f:
         return pickle.load(f)
 
 # デュアルネットワークの学習
@@ -36,7 +36,7 @@ def train_network():
     y_values = np.array(y_values)
 
     # 最新モデルの読み込み
-    model = load_model(sorted(glob('./data/*.h5'))[-1])
+    model = load_model(sorted(glob('./model/*.h5'))[-1])
 
     # モデルのコンパイル
     model.compile(loss=['categorical_crossentropy', 'huber_loss'], optimizer='adam')
@@ -66,8 +66,6 @@ def train_network():
     # モデルの破棄
     K.clear_session()
     del model
-
-    if 
 
 # 動作確認
 if __name__ == '__main__':

@@ -13,9 +13,10 @@ from tensorflow.keras import backend as K
 from glob import glob
 import pickle
 import os
+import platform
 
 # パラメータの準備
-SP_GAME_COUNT = 50 # セルフプレイを行うゲーム数（本家は25000）
+SP_GAME_COUNT = 1 # セルフプレイを行うゲーム数（本家は25000）
 # SP_GAME_COUNT = 500 # セルフプレイを行うゲーム数（本家は25000）
 SP_TEMPERATURE = 1.0 # ボルツマン分布の温度パラメータ
 
@@ -23,9 +24,9 @@ SP_TEMPERATURE = 1.0 # ボルツマン分布の温度パラメータ
 def write_data(history):
     now = datetime.now()
     os.makedirs('./data/', exist_ok=True) # フォルダがない時は生成
-    path = './data/{:04}{:02}{:02}{:02}{:02}{:02}.history'.format(
+    save_path = './data/{:04}{:02}{:02}{:02}{:02}{:02}.history'.format(
         now.year, now.month, now.day, now.hour, now.minute, now.second)
-    with open(path, mode='wb') as f:
+    with open(save_path, mode='wb') as f:
         pickle.dump(history, f)
 
 # 1ゲームの実行

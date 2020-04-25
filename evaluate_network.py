@@ -87,11 +87,11 @@ def evaluate_network():
     del model1
 
     # ベストプレイヤーの交代
-    if average_point >= 0.53:
-        update_best_player()
-        return True
-    else:
-        return False
+    # if average_point >= 0.53:
+    #     update_best_player()
+    #     return True
+    # else:
+    #     return False
 
 # 動作確認
 if __name__ == '__main__':

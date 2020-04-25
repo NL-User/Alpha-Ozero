@@ -36,9 +36,9 @@ def residual_block():
 
 # デュアルネットワークの作成
 def dual_network():
-    # モデル作成済みの場合は無処理
-    if os.path.exists('./model/best.h5'):
-        return
+    # # モデル作成済みの場合は無処理
+    # if os.path.exists('./model/best.h5'):
+    #     return
 
     # 入力層
     board = Input(shape=DN_INPUT_SHAPE)
