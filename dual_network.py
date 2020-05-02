@@ -11,16 +11,18 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras import backend as K
 import os
+from config import BOARD_X_SIZE, BOARD_Y_SIZE
 
 # パラメータの準備
 DN_INPUT_SHAPE = (BOARD_Y_SIZE, BOARD_X_SIZE, 2)
 DN_FILTERS  = 128 # 畳み込み層のカーネル数（本家は256）
-DN_RESIDUAL_NUM =  16 # 残差ブロックの数（本家は19）
+DN_RESIDUAL_NUM =  max(BOARD_X_SIZE, BOARD_Y_SIZE) # 残差ブロックの数（本家は19）
+L2_NORM = 0.001
 
 # 畳み込み層の作成
 def conv(filters):
     return Conv2D(filters, 3, padding='same', use_bias=False,
-        kernel_initializer='he_normal', kernel_regularizer=l2(0.0005))
+        kernel_initializer='zeros', kernel_regularizer=l2(L2_NORM))
 
 # 残差ブロックの作成
 def residual_block():
@@ -55,7 +57,7 @@ def dual_network():
     x = Activation('relu')(x)
 
     # 残差ブロック x 16
-    for i in range(DN_RESIDUAL_NUM):
+    for _ in range(DN_RESIDUAL_NUM):
         x = residual_block()(x)
 
     # プーリング層
@@ -65,11 +67,11 @@ def dual_network():
     x = Add()([x, turn])
 
     # ポリシー出力
-    p = Dense(CELLS_COUNT + 1, kernel_regularizer=l2(0.0005),
+    p = Dense(CELLS_COUNT + 1, kernel_regularizer=l2(L2_NORM),
                 activation='softmax', name='pi')(x)
 
     # バリュー出力
-    v = Dense(1, kernel_regularizer=l2(0.0005))(x)
+    v = Dense(1, kernel_regularizer=l2(L2_NORM))(x)
     v = Activation('tanh', name='v')(v)
 
     # モデルの作成
@@ -77,7 +79,7 @@ def dual_network():
 
     # モデルの保存
     os.makedirs('./model/', exist_ok=True) # フォルダがない時は生成
-    model.save('./model/best.h5') # ベストプレイヤーのモデル
+    model.save('./model/init.h5') # ベストプレイヤーのモデル
 
     # モデルの破棄
     K.clear_session()

@@ -18,7 +18,7 @@ import os
 import platform
 
 # パラメータの準備
-SP_GAME_COUNT = 1 # セルフプレイを行うゲーム数（本家は25000）
+SP_GAME_COUNT = 1000 # セルフプレイを行うゲーム数（本家は25000）
 # SP_GAME_COUNT = 500 # セルフプレイを行うゲーム数（本家は25000）
 SP_TEMPERATURE = 1.0 # ボルツマン分布の温度パラメータ
 
@@ -43,7 +43,7 @@ def play(model):
         # ゲーム終了時
         if state.is_done():
             break
-
+        
         # 合法手の確率分布の取得
         scores = pv_mcts_scores(model, state, SP_TEMPERATURE)
 
@@ -71,7 +71,7 @@ def self_play():
     # 学習データ
     history = []
 
-    # 最新？のモデルの読み込み
+    # 最新のモデルの読み込み
     model = load_model(sorted(glob('./model/*.h5'))[-1])
 
     # 複数回のゲームの実行

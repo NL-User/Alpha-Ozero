@@ -91,7 +91,7 @@ def pv_mcts_scores(model, state, temperature):
                     # 
                     self.child_nodes.append(Node(self.state.get_next(action_convert_to_bit(i)),policie))
                 return value
-
+            
             # 子ノードが存在する時
             else:
                 # アーク評価値が最大の子ノードの評価で価値を取得

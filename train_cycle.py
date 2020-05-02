@@ -17,8 +17,8 @@ def train_cycle():
     if  len(glob('./model/*.h5')) == 0:
         dual_network()
 
-    for i in range(10):
-        print('Train',i,'====================')
+    for i in range(2):
+        print('Train',i + 1,'====================')
         # セルフプレイ部
         self_play()
 
