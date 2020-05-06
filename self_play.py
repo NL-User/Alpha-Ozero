@@ -18,8 +18,6 @@ import os
 import platform
 
 # パラメータの準備
-SP_GAME_COUNT = 1000 # セルフプレイを行うゲーム数（本家は25000）
-# SP_GAME_COUNT = 500 # セルフプレイを行うゲーム数（本家は25000）
 SP_TEMPERATURE = 1.0 # ボルツマン分布の温度パラメータ
 
 # 学習データの保存
@@ -67,7 +65,7 @@ def play(model):
     return history
 
 # セルフプレイ
-def self_play():
+def self_play(iterate_match_count = 1):
     # 学習データ
     history = []
 
@@ -75,13 +73,13 @@ def self_play():
     model = load_model(sorted(glob('./model/*.h5'))[-1])
 
     # 複数回のゲームの実行
-    for i in range(SP_GAME_COUNT):
+    for i in range(iterate_match_count):
         # 1ゲームの実行
         h = play(model)
         history.extend(h)
 
         # 出力
-        print('\rSelfPlay {}/{}'.format(i+1, SP_GAME_COUNT), end='')
+        print('\rSelfPlay {}/{}'.format(i+1, iterate_match_count), end='')
     print('')
 
     # 学習データの保存

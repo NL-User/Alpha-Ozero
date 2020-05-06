@@ -17,16 +17,19 @@ def train_cycle():
     if  len(glob('./model/*.h5')) == 0:
         dual_network()
 
-    for i in range(2):
+    for i in range(5):
         print('Train',i + 1,'====================')
         # セルフプレイ部
-        self_play()
+        self_play(60)
 
         # パラメータ更新部
         train_network()
 
         # 新パラメータ評価部
         # evaluate_network()
+    print('\n====================')
+    print('End')
+    print('====================')
 
 if __name__ == '__main__':
     train_cycle()

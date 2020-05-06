@@ -15,8 +15,6 @@ import os
 from glob import glob
 import pandas as pd
 
-# パラメータの準備
-RN_EPOCHS = 200 # 学習回数
 
 # 学習データの読み込み
 def load_data():
@@ -25,7 +23,7 @@ def load_data():
         return pickle.load(f)
 
 # デュアルネットワークの学習
-def train_network():
+def train_network(epoch_count=200):
     # 学習データの読み込み
     history = load_data()
     xs, turn_nums, y_policies, y_values = zip(*history)
@@ -45,21 +43,17 @@ def train_network():
 
     # 学習率
     def step_decay(epoch):
-        x = 0.001
+        x = 0.0008
         if epoch >= 150: x = 0.0001
         elif epoch >= 100: x = 0.00025
         elif epoch >= 50: x = 0.0005
         return x
     lr_decay = LearningRateScheduler(step_decay)
     early_stopping = EarlyStopping(min_delta=0.0, patience=10, verbose=1)
-    # 出力
-    print_callback = LambdaCallback(
-        on_epoch_begin=lambda epoch,logs:
-                print('\rTrain {}/{}'.format(epoch + 1,RN_EPOCHS), end=''))
 
     # 学習の実行
-    history = model.fit([xs, turn_nums], [y_policies, y_values], batch_size=256, epochs=RN_EPOCHS, validation_split=0.2,
-            verbose=1, callbacks=[lr_decay, early_stopping, print_callback])
+    history = model.fit([xs, turn_nums], [y_policies, y_values], batch_size=32, epochs=epoch_count, validation_split=0.2,
+            verbose=1, callbacks=[lr_decay, early_stopping])
     print('')
 
     model_index_str = str(len(glob('./model/latest*.h5')) + 1)

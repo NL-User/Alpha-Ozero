@@ -228,18 +228,17 @@ def action_convert_to_bit(action):
             return 1 << action
 
 # ランダムで行動選択
-def random_action(legal_actions):
+def random_action(state):
+    legal_actions = np.array(state.legal_actions_array(), dtype=float)
     # 合法手の数を取得
     legal_action_num = int(np.sum(legal_actions))
     # 合法手が一つ以上あったら
     if legal_action_num != 0:
-        legal_actions = np.array(legal_actions,dtype=float)
         # legal_actions /= legal_action_num
         legal_actions[legal_actions == 1] = 1 / legal_action_num
-        # print(len(legal_actions))
         # 合法手の中からランダムで一つ選択
         # bit→文字列→listでindexが逆順なので逆順のrangeを取得
-        action = int(np.random.choice(range(CELLS_COUNT - 1,-1,-1),1,p=legal_actions)[0])
+        action = int(np.random.choice(range(CELLS_COUNT - 1,-1,-1), p=legal_actions))
         # ビットに変換
         return 1 << action
     else:
@@ -263,7 +262,7 @@ if __name__ == '__main__':
         print(('白' if state.is_black_turn else '黒') + 'のターン')
         print(state)
         # 次の状態の取得
-        state.next(random_action(state.legal_actions_array()))
+        state.next(random_action(state))
 
     print('終了\n')
     print(state)

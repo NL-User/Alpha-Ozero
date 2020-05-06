@@ -148,7 +148,7 @@ def boltzman(xs, temperature):
 
 # 動作確認
 if __name__ == '__main__':
-    # モデルの読み込み
+    # 最新モデルの読み込み
     path = sorted(glob('./model/*.h5'))[-1]
     model = load_model(str(path))
 
