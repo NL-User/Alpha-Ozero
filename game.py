@@ -13,9 +13,9 @@ black_defalt_board = (1 << BOARD_Y_SIZE // 2 * BOARD_X_SIZE + (BOARD_X_SIZE // 2
 # white_board_defalt_value = 0x0000001008000000
 white_defalt_board = (1 << BOARD_Y_SIZE // 2 * BOARD_X_SIZE + BOARD_X_SIZE // 2) | (1 << (BOARD_Y_SIZE // 2 - 1) * BOARD_X_SIZE + BOARD_X_SIZE // 2 - 1)
 
-board_min_size = min(BOARD_X_SIZE,BOARD_Y_SIZE)
+board_min_size = min(BOARD_X_SIZE, BOARD_Y_SIZE)
 horizontal_mask_bit = all_standing_bit
-for i in range(0,CELLS_COUNT,BOARD_X_SIZE):
+for i in range(0, CELLS_COUNT, BOARD_X_SIZE):
     horizontal_mask_bit ^= 1 << i
     horizontal_mask_bit ^= 1 << i + BOARD_X_SIZE - 1
 vertical_mask_bit = (1 << (CELLS_COUNT - BOARD_X_SIZE)) - 1 ^ ((1 << BOARD_X_SIZE) - 1)
@@ -31,9 +31,8 @@ legal_diagonal_minus = (BOARD_X_SIZE - 1, board_min_size)
 legal_diagonal_plus = (BOARD_X_SIZE + 1, board_min_size)
 
 
-
 class State:
-    def __init__(self, black_board = None, white_board = None, is_black_turn = False):
+    def __init__(self, black_board=None, white_board=None, is_black_turn=False):
         # 連続パスによる終了
         self.pass_end = False
         # ターンの保存(Falseが黒)
@@ -48,9 +47,11 @@ class State:
             self.black_board = black_board
             self.white_board = white_board
     # 盤面のコマの数
+
     def piece_count(self):
         return count_bit(self.black_board) + count_bit(self.white_board)
     # 黒ならTrueを入力すると報酬を得られる
+
     def get_reward(self, is_black_flag):
         # 引き分けは0、勝てば1、負ければ-1
         if self.is_draw():
@@ -75,6 +76,7 @@ class State:
     def is_done(self):
         return self.pass_end or self.piece_count() == CELLS_COUNT
     # 次の状態の取得
+
     def next(self, action):
         # print_board(state.legal_actions())
         # state = State(self.black_board, self.white_board, self.turn)
@@ -85,12 +87,14 @@ class State:
         # 2回連続パス判定
         if action == 0 and self.legal_actions() == 0:
             self.pass_end = True
-    def get_next(self,action):
+
+    def get_next(self, action):
         state = copy.deepcopy(self)
         # state = State(self.black_board, self.white_board, self.is_black_turn)
         state.next(action)
         return state
     # ターンによる並び替え
+
     def swap(self):
         if not self.is_black_turn:
             return self.black_board, self.white_board
@@ -106,6 +110,7 @@ class State:
             tmp |= masked & (tmp >> direction)
         return blank & (tmp >> direction)
     # 上、左方向の合法手
+
     def legal_l(self, board, blank, masked, direction, count):
         """Direction << dir exploring."""
         tmp = masked & (board << direction)
@@ -114,13 +119,14 @@ class State:
             tmp |= masked & (tmp << direction)
         return blank & (tmp << direction)
     # 合法手が立ったビットを取得
+
     def legal_actions(self):
         player, opponent = self.swap()
         blank = ~(player | opponent)
 
         horizontal = opponent & horizontal_mask_bit
         vertical = opponent & vertical_mask_bit
-        diagonal = opponent & diagonal_mask_bit 
+        diagonal = opponent & diagonal_mask_bit
 
         legal = self.legal_l(player, blank, vertical, *legal_vertical)
         legal |= self.legal_l(player, blank, horizontal, *legal_horizontal)
@@ -159,6 +165,7 @@ class State:
                     tmp |= tmp >> direction
         return reverse
     # 右シフト方向
+
     def reversed_r(self, player, blank_masked, site, direction, count):
         """Direction >> for self.reversed()."""
         reverse = 0
@@ -189,7 +196,7 @@ class State:
         rev |= self.reversed_r(player, blank_vertical, site, *legal_vertical)
         rev |= self.reversed_r(player, blank_diagonal, site, *legal_diagonal_minus)
         rev |= self.reversed_r(player, blank_diagonal, site, *legal_diagonal_plus)
-        
+
         if flip:
             if not self.is_black_turn:
                 self.black_board ^= (rev ^ site)
@@ -199,7 +206,8 @@ class State:
                 self.black_board ^= rev
         else:
             # 任意のマスに置くと裏返るマスのフラグが立ったビットを取得
-            return rev# 文字列表示
+            return rev  # 文字列表示
+
     def __str__(self):
         black = convert_to_np_array(self.black_board)
         white = convert_to_np_array(self.white_board)
@@ -209,7 +217,7 @@ class State:
             for v in column:
                 if v == 1:
                     result += black_piece
-                            
+
                 elif v == 2:
                     result += white_piece
                 else:
@@ -220,14 +228,16 @@ class State:
                 result += '\n'
         return result + '\n'
 
-    
+
 def action_convert_to_bit(action):
-        if action == -1:
-            return 0
-        else:
-            return 1 << action
+    if action == -1:
+        return 0
+    else:
+        return 1 << action
 
 # ランダムで行動選択
+
+
 def random_action(state):
     legal_actions = np.array(state.legal_actions_array(), dtype=float)
     # 合法手の数を取得
@@ -238,14 +248,49 @@ def random_action(state):
         legal_actions[legal_actions == 1] = 1 / legal_action_num
         # 合法手の中からランダムで一つ選択
         # bit→文字列→listでindexが逆順なので逆順のrangeを取得
-        action = int(np.random.choice(range(CELLS_COUNT - 1,-1,-1), p=legal_actions))
+        action = int(np.random.choice(range(CELLS_COUNT - 1, -1, -1), p=legal_actions))
         # ビットに変換
         return 1 << action
     else:
         return 0
 
-   
-    
+# 盤面の回転と反転（かさ増し）
+
+
+def board_rotation_and_reverse_all(board):
+    board = board.reshape(BOARD_Y_SIZE, BOARD_X_SIZE)
+    board_array = [board.flatten()]
+    for i in range(2):
+        board_array.append(np.flip(board, axis=i).flatten())
+        board_array.append(np.flip(np.rot90(board, 1), axis=i).flatten())
+    for i in range(1, 4):
+        board_array.append(np.rot90(board, i).flatten())
+    return np.array(board_array)
+
+
+def board_rotation_and_reverse(board):
+    board_array = board_rotation_and_reverse_all(board).tolist()
+    board_str = list(map(lambda l: "".join(map(str, l)), board_array))
+    unique_str_array = list(set(board_str))
+    unique_board_array = []
+
+    for i in range(len(unique_str_array)):
+        for j in range(len(board_str)):
+            if board_str[j] == unique_str_array[i]:
+                unique_board_array.append(board_array[j])
+                break
+    return unique_board_array
+
+
+# ポリシーの反転の回転（かさ増し）
+def policies_rotation_and_reverse_all(policies):
+    pass_value = policies[CELLS_COUNT]
+    policies_without_pass = np.delete(policies, CELLS_COUNT)
+    policies_list = board_rotation_and_reverse_all(policies_without_pass.reshape(BOARD_Y_SIZE, BOARD_X_SIZE))
+    policies = np.empty((len(policies_list), CELLS_COUNT + 1))
+    return np.array([np.append(policies_list[i].flatten(), pass_value) for i in range(len(policies_list))])
+
+
 # 動作確認
 if __name__ == '__main__':
 
@@ -274,5 +319,5 @@ if __name__ == '__main__':
         result = "白の勝ち"
     else:
         result = "黒の勝ち"
-        
+
     print(result)
