@@ -66,18 +66,16 @@ class EvaluateNetwork():
         point = point[point >= np.median(point)]
 
         # pointが少ない順に並べ替え
-        self.index = np.argsort(point)
-        self.model = self.model[self.index]
+        self.index = self.index[np.argsort(point)]
+        self.model = self.model[np.argsort(point)]
         self.print_remaining_models()
         while len(self.model) > 2:
             for i in range(len(self.model)):
                 if i >= len(self.model) // 2:
                     continue
-                j = round_odd_num_under(len(point) - i - 1)
+                j = round_odd_num_under(len(self.model) - i) - 1
                 if 0 <= j < len(point):
                     self.delete_weak_model(i, j, EN_GAME_COUNT)
-
-            print(self.index[(len(self.index) - 1) // 2:])
 
             # 弱い順に並んでいるので、約半分にする
             self.model = self.model[max(1, len(self.model) - 1) // 2:]
