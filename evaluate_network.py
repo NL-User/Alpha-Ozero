@@ -60,20 +60,28 @@ class EvaluateNetwork():
             point[i] += self.get_game_result_point(next_actions, EN_GAME_COUNT)
             print('{}st AveragePoint: {}'.format(i + 1, point[i] / EN_GAME_COUNT))
 
-        # 中央値以上のもので対決
-        self.model = self.model[point >= np.median(point)]
-        self.index = self.index[point >= np.median(point)]
-        point = point[point >= np.median(point)]
+        # あくまでランダムなので、結果が悪かった（中央値未満の）モデルに対して、もう一度評価し直し、評価値は2回の平均をとる
+        for i in np.argsort(point)[:len(point[point < np.median(point)])]:
+            next_actions = [pv_mcts_action(self.model[i]), random_action]
+            point[i] = (point[i] + self.get_game_result_point(next_actions, EN_GAME_COUNT)) / 2
+            print('{}st AveragePoint: {}'.format(i + 1, point[i] / EN_GAME_COUNT))
+
+        # 第一四分位数より大きいもので対決
+        first_quartile = np.percentile(point, 25)
+        self.model = self.model[point > first_quartile]
+        self.index = self.index[point > first_quartile]
+        # indexを計算するためにpointもフィルタ
+        point = point[point > first_quartile]
 
         # pointが少ない順に並べ替え
         self.index = self.index[np.argsort(point)]
         self.model = self.model[np.argsort(point)]
         self.print_remaining_models()
-        while len(self.model) > 2:
+        while len(self.model) > 1:
             for i in range(len(self.model)):
                 if i >= len(self.model) // 2:
                     continue
-                j = round_odd_num_under(len(self.model) - i) - 1
+                j = self.index[round_odd_num_under(len(self.model) - i) - 1]
                 if 0 <= j < len(point):
                     self.delete_weak_model(i, j, EN_GAME_COUNT)
 
