@@ -14,6 +14,7 @@ from pathlib import Path
 from glob import glob
 from shutil import copy
 import numpy as np
+import re
 
 # パラメータの準備
 EN_GAME_COUNT = 16  # 1評価あたりのゲーム数（本家は400）
@@ -45,44 +46,51 @@ class EvaluateNetwork():
         else:
             return 1
 
-    def evaluate(self, model_path_list):
-        self.model = np.empty(len(model_path_list),
-                              dtype=tf.python.keras.engine.training.Model)
-        point = np.zeros(len(model_path_list))
-        # 1から始まるindexを取得
-        self.index = np.arange(len(model_path_list))
+    def evaluate(self, model_path_list, evaluate_random_with_first):
+        self.model = np.empty(len(model_path_list), dtype=tf.python.keras.engine.training.Model)
+        self.index = np.empty(len(model_path_list), dtype=int)
+
+        # モデルとインデックスの初期化
         for i in range(len(model_path_list)):
             self.model[i] = load_model(model_path_list[i])
+            # ファイル名からindexを取得
+            self.index[i] = int(re.sub(r'(?=.+latest([0-9]+)).+\.h5', r'\1', model_path_list[i]))
 
-            # PV MCTSで行動選択を行う関数の生成
-            next_actions = [pv_mcts_action(self.model[i]), random_action]
+        if evaluate_random_with_first:
+            point = np.zeros(len(model_path_list))
 
-            point[i] += self.get_game_result_point(next_actions, EN_GAME_COUNT)
-            print('{}st AveragePoint: {}'.format(i + 1, point[i] / EN_GAME_COUNT))
+            for i in range(len(model_path_list)):
 
-        # あくまでランダムなので、結果が悪かった（中央値未満の）モデルに対して、もう一度評価し直し、評価値は2回の平均をとる
-        for i in np.argsort(point)[:len(point[point < np.median(point)])]:
-            next_actions = [pv_mcts_action(self.model[i]), random_action]
-            point[i] = (point[i] + self.get_game_result_point(next_actions, EN_GAME_COUNT)) / 2
-            print('{}st AveragePoint: {}'.format(i + 1, point[i] / EN_GAME_COUNT))
+                # PV MCTSで行動選択を行う関数の生成
+                next_actions = [pv_mcts_action(self.model[i]), random_action]
 
-        # 第一四分位数より大きいもので対決
-        first_quartile = np.percentile(point, 25)
-        self.model = self.model[point > first_quartile]
-        self.index = self.index[point > first_quartile]
-        # indexを計算するためにpointもフィルタ
-        point = point[point > first_quartile]
+                point[i] += self.get_game_result_point(next_actions, EN_GAME_COUNT)
+                print('{}st AveragePoint: {}'.format(i + 1, point[i] / EN_GAME_COUNT))
 
-        # pointが少ない順に並べ替え
-        self.index = self.index[np.argsort(point)]
-        self.model = self.model[np.argsort(point)]
-        self.print_remaining_models()
+            # あくまでランダムなので、結果が悪かった（中央値未満の）モデルに対して、もう一度評価し直し、評価値は2回の平均をとる
+            for i in np.argsort(point)[:len(point[point < np.median(point)])]:
+                next_actions = [pv_mcts_action(self.model[i]), random_action]
+                point[i] = (point[i] + self.get_game_result_point(next_actions, EN_GAME_COUNT)) / 2
+                print('{}st AveragePoint: {}'.format(i + 1, point[i] / EN_GAME_COUNT))
+
+            # 第一四分位数より大きいもので対決
+            first_quartile = np.percentile(point, 25)
+            self.model = self.model[point > first_quartile]
+            self.index = self.index[point > first_quartile]
+            # indexを計算するためにpointもフィルタ
+            point = point[point > first_quartile]
+
+            # pointが少ない順に並べ替え
+            self.index = self.index[np.argsort(point)]
+            self.model = self.model[np.argsort(point)]
+            self.print_remaining_models()
+
         while len(self.model) > 1:
             for i in range(len(self.model)):
                 if i >= len(self.model) // 2:
                     continue
                 j = round_odd_num_under(len(self.model)) - i - 1
-                if 0 <= j < len(point):
+                if 0 <= j < len(self.model):
                     self.delete_weak_model(i, j, EN_GAME_COUNT)
 
             # 弱い順に並んでいるので、約半分にする
@@ -160,8 +168,8 @@ class EvaluateNetwork():
 # ネットワークの評価
 
 
-def evaluate_network(model_path_list=glob('model/latest*.h5')):
-    EvaluateNetwork().evaluate(model_path_list)
+def evaluate_network(model_path_list=glob('model/latest*.h5'), evaluate_random_with_first=True):
+    EvaluateNetwork().evaluate(model_path_list, evaluate_random_with_first)
 
 
 # 動作確認
