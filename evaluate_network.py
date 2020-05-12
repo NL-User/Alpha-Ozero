@@ -81,7 +81,7 @@ class EvaluateNetwork():
             for i in range(len(self.model)):
                 if i >= len(self.model) // 2:
                     continue
-                j = self.index[round_odd_num_under(len(self.model) - i) - 1]
+                j = round_odd_num_under(len(self.model)) - i - 1
                 if 0 <= j < len(point):
                     self.delete_weak_model(i, j, EN_GAME_COUNT)
 
