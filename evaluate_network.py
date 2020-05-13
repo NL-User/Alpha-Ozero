@@ -71,7 +71,7 @@ class EvaluateNetwork():
             for i in np.argsort(point)[:len(point[point < np.median(point)])]:
                 next_actions = [pv_mcts_action(self.model[i]), random_action]
                 point[i] = (point[i] + self.get_game_result_point(next_actions, EN_GAME_COUNT)) / 2
-                print('{}st AveragePoint: {}'.format(i + 1, point[i] / EN_GAME_COUNT))
+                print('{}st AveragePoint: {}'.format(self.index[i], point[i] / EN_GAME_COUNT))
 
             # 第一四分位数より大きいもので対決
             first_quartile = np.percentile(point, 25)
@@ -91,7 +91,7 @@ class EvaluateNetwork():
                     continue
                 j = round_odd_num_under(len(self.model)) - i - 1
                 if 0 <= j < len(self.model):
-                    self.delete_weak_model(i, j, EN_GAME_COUNT)
+                    self.play_and_sort_model(i, j, EN_GAME_COUNT)
 
             # 弱い順に並んでいるので、約半分にする
             self.model = self.model[max(1, len(self.model) - 1) // 2:]
@@ -99,7 +99,7 @@ class EvaluateNetwork():
             self.print_remaining_models()
             # print(len(self.index))
 
-        print('Finaly latest{}'.format(self.index[0] + 1))
+        print('Finaly latest{}'.format(self.index[0]))
 
         # モデルの破棄
         K.clear_session()
@@ -112,28 +112,23 @@ class EvaluateNetwork():
         # else:
         #     return False
 
-    def delete_weak_model(self, a, b, count):
+    def play_and_sort_model(self, a, b, count):
         score = self.get_game_result_point([pv_mcts_action(self.model[a]), pv_mcts_action(self.model[b])], count)
         if score == count / 2:
-            self.delete_weak_model(a, b, 3)
-            # 削除せずもう一度戦わせる
+            # 勝敗がつかなければもう一度戦わせる
+            self.play_and_sort_model(a, b, 3)
             return
         elif score < count / 2:
-            print("latest{} Vs latest{} is latest{} win!".format(self.index[a] + 1, self.index[b] + 1, self.index[b] + 1))
-            # 事前レートが上（b）の方が買ったら下を削除
-            # delete_index = a
+            print("latest{} Vs latest{} is latest{} win!".format(self.index[a], self.index[b], self.index[b]))
+            # 事前レートが上（b）の方が買ったらそのまま
         elif score > count / 2:
-            print("latest{} Vs latest{} is latest{} win!".format(self.index[a] + 1, self.index[b] + 1, self.index[a] + 1))
+            print("latest{} Vs latest{} is latest{} win!".format(self.index[a], self.index[b], self.index[a]))
             # 事前レートが下（a）の方が買ったらレートを入れ替え、a（元はb）を削除
             self.model[a], self.model[b] = self.model[b], self.model[a]
             self.index[a], self.index[b] = self.index[b], self.index[a]
-            # delete_index = a
-
-        # np.delete(self.model, delete_index)
-        # np.delete(self.model, delete_index)
 
     def print_remaining_models(self):
-        print("Remaining models: {}".format(self.index + 1))
+        print("Remaining models: {}".format(self.index))
 
     def get_game_result_point(self, next_actions, play_game_count):
         total_point = 0
