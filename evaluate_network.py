@@ -94,8 +94,8 @@ class EvaluateNetwork():
                     self.play_and_sort_model(i, j, EN_GAME_COUNT)
 
             # 弱い順に並んでいるので、約半分にする
-            self.model = self.model[max(1, len(self.model) - 1) // 2:]
-            self.index = self.index[max(1, len(self.index) - 1) // 2:]
+            self.model = self.model[max(1, (len(self.model) - 1) // 2):]
+            self.index = self.index[max(1, (len(self.index) - 1) // 2):]
             self.print_remaining_models()
             # print(len(self.index))
 
