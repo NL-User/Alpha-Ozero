@@ -11,10 +11,10 @@ from glob import glob
 import pickle
 import numpy as np
 import pandas as pd
-from tfa.optimizers import RectifiedAdam
 from tensorflow.keras.callbacks import LearningRateScheduler, LambdaCallback, EarlyStopping
 from tensorflow.keras.models import load_model
 from tensorflow.keras import backend as K
+import tensorflow_addons.optimizers import RectifiedAdam
 from dual_network import DN_INPUT_SHAPE
 from config import BOARD_X_SIZE, BOARD_Y_SIZE, CELLS_COUNT
 from game import board_rotation_and_reverse, board_rotation_and_reverse_all, policies_rotation_and_reverse_all
@@ -88,12 +88,11 @@ def train_network(model_path=sorted(glob('./model/*.h5'))[-1], learn_data_path_l
         # モデルのコンパイル
         model.compile(loss=['categorical_crossentropy', 'mse'], optimizer=RectifiedAdam())
 
-        lr_decay = LearningRateScheduler(step_decay)
-        early_stopping = EarlyStopping(min_delta=0.1, patience=8, verbose=1)
+        early_stopping = EarlyStopping(min_delta=0.1, patience=16, verbose=1)
 
         # 学習の実行
-        history = model.fit([board, turn_nums], [y_policies, y_values], batch_size=64, epochs=epoch_count, validation_split=0.2,
-                            verbose=1, callbacks=[lr_decay, early_stopping])
+        history = model.fit([board, turn_nums], [y_policies, y_values], batch_size=32, epochs=epoch_count, validation_split=0.2,
+                            verbose=1, callbacks=[early_stopping])
         print()
         model_index_str = len(glob('./model/latest*.h5')) + 1
         # 学習履歴をファイルに保存

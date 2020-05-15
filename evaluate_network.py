@@ -10,11 +10,15 @@ from pv_mcts import pv_mcts_action
 import tensorflow as tf
 from tensorflow.keras.models import load_model
 from tensorflow.keras import backend as K
+from tensorflow_addons.optimizers import RectifiedAdam
 from pathlib import Path
 from glob import glob
 from shutil import copy
 import numpy as np
 import re
+
+
+tf.keras.optimizers.RectifiedAdam = RectifiedAdam
 
 # パラメータの準備
 EN_GAME_COUNT = 16  # 1評価あたりのゲーム数（本家は400）
@@ -52,7 +56,7 @@ class EvaluateNetwork():
 
         # モデルとインデックスの初期化
         for i in range(len(model_path_list)):
-            self.model[i] = load_model(model_path_list[i])
+            self.model[i] = load_model(model_path_list[i], compile=False)
             # ファイル名からindexを取得
             self.index[i] = int(re.sub(r'(?=.+latest([0-9]+)).+\.h5', r'\1', model_path_list[i]))
 
