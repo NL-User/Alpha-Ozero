@@ -11,6 +11,7 @@ from glob import glob
 import pickle
 import numpy as np
 import pandas as pd
+from tfa.optimizers import RectifiedAdam
 from tensorflow.keras.callbacks import LearningRateScheduler, LambdaCallback, EarlyStopping
 from tensorflow.keras.models import load_model
 from tensorflow.keras import backend as K
@@ -85,10 +86,10 @@ def train_network(model_path=sorted(glob('./model/*.h5'))[-1], learn_data_path_l
         board = board.reshape(len(board), c, a, b).transpose(0, 2, 3, 1)
         print("board: {} turn: {} policy: {} value: {}".format(len(board), len(turn_nums), len(y_policies), len(y_values)))
         # モデルのコンパイル
-        model.compile(loss=['categorical_crossentropy', 'huber_loss'], optimizer='adam')
+        model.compile(loss=['categorical_crossentropy', 'mse'], optimizer=RectifiedAdam())
 
         lr_decay = LearningRateScheduler(step_decay)
-        early_stopping = EarlyStopping(min_delta=0.1, patience=10, verbose=1)
+        early_stopping = EarlyStopping(min_delta=0.1, patience=8, verbose=1)
 
         # 学習の実行
         history = model.fit([board, turn_nums], [y_policies, y_values], batch_size=64, epochs=epoch_count, validation_split=0.2,
