@@ -91,8 +91,8 @@ def train_network(model_path=sorted(glob('./model/*.h5'))[-1], learn_data_path_l
         early_stopping = EarlyStopping(min_delta=0.1, patience=16, verbose=1)
 
         # 学習の実行
-        history = model.fit([board, turn_nums], [y_policies, y_values], batch_size=32, epochs=epoch_count, validation_split=0.2,
-                            verbose=1, callbacks=[early_stopping])
+        history = model.fit([board, turn_nums], [y_policies, y_values], batch_size=256, epochs=epoch_count, validation_split=0.2,
+                            shuffle=False, verbose=1, callbacks=[early_stopping])
         print()
         model_index_str = len(glob('./model/latest*.h5')) + 1
         # 学習履歴をファイルに保存
