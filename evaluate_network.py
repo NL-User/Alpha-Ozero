@@ -39,6 +39,10 @@ def round_odd_num_under(n):
         return n
 
 
+def get_filename_from_file_path(file_path):
+    return re.sub(r".+model\/(.+)\.h5", r"\1", file_path)
+
+
 class EvaluateNetwork():
     # 先手プレイヤーのポイント
     def first_player_point(self, ended_state):
@@ -52,13 +56,13 @@ class EvaluateNetwork():
 
     def evaluate(self, model_path_list, evaluate_random_with_first):
         self.model = np.empty(len(model_path_list), dtype=tf.python.keras.engine.training.Model)
-        self.index = np.empty(len(model_path_list), dtype=int)
+        self.file_name = np.empty(len(model_path_list), dtype=str)
 
         # モデルとインデックスの初期化
         for i in range(len(model_path_list)):
             self.model[i] = load_model(model_path_list[i], compile=False)
-            # ファイル名からindexを取得
-            self.index[i] = int(re.sub(r'(?=.+latest([0-9]+)).+\.h5', r'\1', model_path_list[i]))
+            # ファイル名を取得
+            self.file_name[i] = get_filename_from_file_path(model_path_list[i])
 
         if evaluate_random_with_first:
             point = np.zeros(len(model_path_list))
@@ -75,17 +79,17 @@ class EvaluateNetwork():
             for i in np.argsort(point)[:len(point[point < np.median(point)])]:
                 next_actions = [pv_mcts_action(self.model[i]), random_action]
                 point[i] = (point[i] + self.get_game_result_point(next_actions, EN_GAME_COUNT)) / 2
-                print('{}st AveragePoint: {}'.format(self.index[i], point[i] / EN_GAME_COUNT))
+                print('{} AveragePoint: {}'.format(self.file_name[i], point[i] / EN_GAME_COUNT))
 
             # 第一四分位数より大きいもので対決
             first_quartile = np.percentile(point, 25)
             self.model = self.model[point > first_quartile]
-            self.index = self.index[point > first_quartile]
+            self.file_name = self.file_name[point > first_quartile]
             # indexを計算するためにpointもフィルタ
             point = point[point > first_quartile]
 
             # pointが少ない順に並べ替え
-            self.index = self.index[np.argsort(point)]
+            self.file_name = self.file_name[np.argsort(point)]
             self.model = self.model[np.argsort(point)]
             self.print_remaining_models()
 
@@ -99,11 +103,11 @@ class EvaluateNetwork():
 
             # 弱い順に並んでいるので、約半分にする
             self.model = self.model[max(1, (len(self.model) - 1) // 2):]
-            self.index = self.index[max(1, (len(self.index) - 1) // 2):]
+            self.file_name = self.file_name[max(1, (len(self.file_name) - 1) // 2):]
             self.print_remaining_models()
-            # print(len(self.index))
+            # print(len(self.file_name))
 
-        print('Finaly latest{}'.format(self.index[0]))
+        print('Finaly {}'.format(self.file_name[0]))
 
         # モデルの破棄
         K.clear_session()
@@ -123,16 +127,16 @@ class EvaluateNetwork():
             self.play_and_sort_model(a, b, 3)
             return
         elif score < count / 2:
-            print("latest{} Vs latest{} is latest{} win!".format(self.index[a], self.index[b], self.index[b]))
+            print("{} Vs {} is {} win!".format(self.file_name[a], self.file_name[b], self.file_name[b]))
             # 事前レートが上（b）の方が買ったらそのまま
         elif score > count / 2:
-            print("latest{} Vs latest{} is latest{} win!".format(self.index[a], self.index[b], self.index[a]))
+            print("{} Vs {} is {} win!".format(self.file_name[a], self.file_name[b], self.file_name[a]))
             # 事前レートが下（a）の方が買ったらレートを入れ替え、a（元はb）を削除
             self.model[a], self.model[b] = self.model[b], self.model[a]
-            self.index[a], self.index[b] = self.index[b], self.index[a]
+            self.file_name[a], self.file_name[b] = self.file_name[b], self.file_name[a]
 
     def print_remaining_models(self):
-        print("Remaining models: {}".format(self.index))
+        print("Remaining models: {}".format(self.file_name))
 
     def get_game_result_point(self, next_actions, play_game_count):
         total_point = 0

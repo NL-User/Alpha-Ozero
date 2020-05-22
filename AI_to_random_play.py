@@ -3,9 +3,9 @@ from pv_mcts import pv_mcts_action
 from tensorflow.keras.models import load_model
 from game import State, random_action
 from bit_function import count_bit
+from evaluate_network import get_filename_from_file_path
 import random
 from glob import glob
-import re
 
 
 def play_with_random(next_action, view_mode=False):
@@ -71,7 +71,7 @@ def evaluation_with_random(model_path_list=sorted(glob('model/*h5')), game_num=3
             else:
                 lose += 1
         # ファイル名からインデックスを取り出す
-        print("{} win: {} draw: {} lose: {}".format(re.sub(r".+model\/(.+)\.h5", r"\1", model_path), win, draw, lose))
+        print("{} win: {} draw: {} lose: {}".format(get_filename_from_file_path(model_path), win, draw, lose))
 
 
 if __name__ == '__main__':
